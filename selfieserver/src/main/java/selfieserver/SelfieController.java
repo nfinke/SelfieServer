@@ -3,6 +3,10 @@ package selfieserver;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Hashtable;
 
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,26 +37,17 @@ public class SelfieController {
 	};
 	
 	/*
-	 * processSelfie
+	 * getFilters
 	 * 
-	 * selfie to be processed will be specified by id
+	 * returns a list of all filters that can be applied to a selfie.
 	 * 
-	 * filters to be applied to the selfie are passed as a JSON Array in the RequestBody (["1","2"])
-	 * 
-	 * ToDo: Transmit the image to be processed in the RequestBody (Multipart)
+	 * id - identification of the filter
+	 * name - human readable name of the filter (for display in the mobile app for example)
 	 * 
 	 */
-	@RequestMapping (value="/selfie/{selfie}", method=RequestMethod.POST)
-	public void processSelfie(@PathVariable Integer selfie, @RequestBody Integer[] filters){
-		// check for each filter requested by the user if it is supported by the implementation
-		// ToDo: make sure that each filter is only applied once
-		for(Integer filter : filters){
-			// if filter is not supported return status code 501 (NOT IMPLEMENTED)
-			if(FILTERS.containsKey(filter)){
-				System.out.println("Applying filter "+filter+"");
-			}
-		}
-		System.out.println("to selfie "+selfie);
+	@RequestMapping(value="/filters", method=RequestMethod.GET)
+	public Hashtable<Integer,String> getFilters() {
+		return FILTERS;
 	}
 	
 	/*
@@ -65,12 +60,16 @@ public class SelfieController {
 	 * returns link to newly created ressource
 	 * 
 	 */
-	@RequestMapping (value="/selfies", method=RequestMethod.POST)
-	public @ResponseBody String processSelfie(@RequestParam("file") MultipartFile file, @RequestParam("filename") String filename, @RequestBody Integer[] filters) {
+	@RequestMapping (value="/selfies", method=RequestMethod.POST, headers = "content-type=multipart/*")
+	public @ResponseBody String processSelfie(@RequestParam String name, @RequestParam MultipartFile file, @RequestBody Integer[] filters) {
 		if(!file.isEmpty()){
+			// Generate identifier
+			long now = System.currentTimeMillis();			
 			try {
 				byte[] bytes = file.getBytes();
-				BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(new File(filename)));
+				// create temporary file
+				File tmpFile = File.createTempFile("selfie_"+String.valueOf(now), "tmp");
+				BufferedOutputStream stream = new BufferedOutputStream(new FileOutputStream(tmpFile));
 				stream.write(bytes);
 				stream.close();
 				// check for each filter requested by the user if it is supported by the implementation
@@ -92,17 +91,14 @@ public class SelfieController {
 	}
 	
 	/*
-	 * getFilters
+	 * Deleting Selfie from Server
 	 * 
-	 * returns a list of all filters that can be applied to a selfie.
-	 * 
-	 * id - identification of the filter
-	 * name - human readable name of the filter (for display in the mobile app for example)
+	 * Selfie to be deleted is identified by it's ID
 	 * 
 	 */
-	@RequestMapping(value="/filters", method=RequestMethod.GET)
-	public Hashtable<Integer,String> getFilters() {
-		return FILTERS;
+	@RequestMapping (value="/selfie/{selfie}", method=RequestMethod.DELETE)
+	public @ResponseBody String deleteSelfie(@PathVariable Integer selfie){
+		return "Selfie "+selfie+" has been removed from server";
 	}
 	
 }
